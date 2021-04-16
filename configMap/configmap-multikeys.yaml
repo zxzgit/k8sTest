@@ -1,0 +1,36 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: special-config
+  namespace: default
+data: # 设定键 值对
+  SPECIAL_LEVEL: very
+  SPECIAL_TYPE: charm
+
+---
+
+apiVersion: v1
+kind: Pod
+metadata:
+  name: dapi-test-pod
+spec:
+  containers:
+    - name: test-container
+      image: nginx
+      volumeMounts:
+        # 在容器 /etc/config 该目录下放置两个文件 SPECIAL_LEVEL 和 SPECIAL_TYPE，两个文件内容分别是：very 和 charm
+        # 也就是 ConfigMap中data，键作为文件名，值作为文件内容
+        - name: config-volume #对应 volumes.name
+          mountPath: /etc/config
+  volumes:
+    - name: config-volume # 对应 kind: ConfigMap 的 metadata.name
+      configMap:
+        # Provide the name of the ConfigMap containing the files you want
+        # to add to the container
+        name: special-config
+        # items配置后以items中的配置为准，path为文件相对路径 ，key为文件内容
+        # e.g: path: fileName 指文件 /etc/config/fileName ; path: subDir/fileName 指文件 /etc/config/subDir/fileName
+        items:
+          - key: SPECIAL_LEVEL
+            path: keys
+  restartPolicy: Never

@@ -1,0 +1,28 @@
+# 由于两个容器中 共享同一个卷
+#【nginx 容器中的 /var/log/nginx目录】 和 【busybox容器中 /var/log/busybox/nginx 目录 】，两者目录下的内容相同
+apiVersion: v1
+kind: Pod
+metadata:
+  name: volume-pod
+  labels:
+    app: volume-pod
+spec:
+  containers:
+    - name: nginx
+      image: nginx
+      ports:
+        - containerPort: 8080
+      volumeMounts:
+        - name: app-logs
+          mountPath: /var/log/nginx
+
+    - name: busybox
+      image: busybox
+      command: [ "sh", "-c", "tail -f /var/log/busybox/nginx/*.log" ]
+      volumeMounts:
+        - name: app-logs
+          mountPath: /var/log/busybox/nginx
+
+  volumes:
+    - name: app-logs
+      emptyDir: { }
