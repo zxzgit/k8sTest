@@ -1,0 +1,68 @@
+# 部署两个nginx
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: my-nginx-php-fpm-deployment
+spec:
+  selector:
+    matchLabels:
+      run: nginx-php # 对应 spec.template.metadata.labels
+  replicas: 1
+  template:
+    metadata:
+      labels:
+        run: nginx-php # 打这个label给 deployment 和 service 的 spec.selector 选择
+    spec:
+      containers:
+        - name: nginx
+          image: nginx
+          ports:
+            - containerPort: 80
+          volumeMounts:
+            - name: nginx-conf
+              mountPath: /etc/nginx/conf.d
+            - name: code
+              mountPath: /usr/share/nginx/html
+        - name: php-fpm
+          image: php:7.2-fpm-alpine
+          ports:
+            - containerPort: 9000
+          volumeMounts:
+            - name: code
+              mountPath: /usr/share/nginx/html
+      volumes:
+        - name: nginx-conf
+          hostPath:
+            # 宿主上目录位置，这里要使用绝对路径，试了下相对路径不能使用
+            path: /Users/zxz/code/k8s/testMinikub/nginxPhp/hostPathShare/nginx/etc/nginx/conf.d
+            type: DirectoryOrCreate
+        - name: code
+          hostPath:
+            path: /Users/zxz/code/k8s/testMinikub/nginxPhp/hostPathShare/code
+            type: DirectoryOrCreate
+
+
+---
+
+# 暴露服务,服务 labels 为 app:my-nginx 的 pod
+apiVersion: v1
+kind: Service
+metadata:
+  name: my-nginx-php-fpm-service
+spec:
+  type: NodePort
+  selector:
+    # 选择服务的pod
+    run: nginx-php # 对应 kind: Deployment 中 spec.template.metadata.labels
+  ports:
+    - name: http
+      port: 80 # service 端口
+      targetPort: 80 # 容器端口
+      nodePort: 30062 # 对应节点端口，固定一下，方便访问不然一直变动
+      protocol: TCP
+    #- name: php-fpm
+    #  port: 9000 # service 端口
+    #  targetPort: 9000 # 容器端口
+    #  protocol: TCP
+
+---
